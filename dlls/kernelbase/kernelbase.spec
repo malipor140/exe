@@ -741,6 +741,8 @@
 @ stdcall GetTempFileNameW(wstr wstr long ptr)
 @ stdcall GetTempPathA(long ptr)
 @ stdcall GetTempPathW(long ptr)
+@ stdcall GetTempPath2W(long ptr)
+@ stdcall GetTempPath2A(long ptr)
 @ stdcall GetThreadContext(long ptr)
 @ stdcall GetThreadDescription(long ptr)
 @ stdcall GetThreadErrorMode()
