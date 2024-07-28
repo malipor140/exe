@@ -149,7 +149,7 @@ sync_test("builtin_toString", function() {
         [ "figure",          "" ],
         [ "font",            "Font", -1 ],
         [ "footer",          "" ],
-        [ "form",            "Form", -1 ],
+        [ "form",            "Form" ],
         [ "frame",           "Frame", -1 ],
         [ "frameset",        "FrameSet", -1 ],
         [ "h1",              "Heading", -1 ],
@@ -294,9 +294,9 @@ sync_test("builtin_toString", function() {
     if(false /* todo_wine */) test("attributes", e.attributes, "NamedNodeMap");
     test("childNodes", document.body.childNodes, "NodeList", null, true);
     if(clientRects) test("clientRect", clientRects[0], "ClientRect", null, true);
-    if(clientRects) test("clientRects", clientRects, "ClientRectList", null, true);
+    if(clientRects) test("clientRects", clientRects, "ClientRectList");
     if(currentStyle) test("currentStyle", currentStyle, "MSCurrentStyleCSSProperties", null, true);
-    if(v >= 11 /* todo_wine */) test("document", document, v < 11 ? "Document" : "HTMLDocument", null, true);
+    if(v >= 11 /* todo_wine */) test("document", document, v < 11 ? "Document" : "HTMLDocument");
     test("elements", document.getElementsByTagName("body"), "HTMLCollection", null, true);
     test("history", window.history, "History");
     test("implementation", document.implementation, "DOMImplementation");
@@ -379,7 +379,6 @@ sync_test("builtin_obj", function() {
     }catch(ex) {
         e = ex.number;
     }
-    todo_wine_if(v >= 9).
     ok(e === (v < 9 ? 0xa0005 : 0x0ffff) - 0x80000000, "[f.call(Object, 'div')] e = " + e);
 
     e = 0;
@@ -388,7 +387,6 @@ sync_test("builtin_obj", function() {
     }catch(ex) {
         e = ex.number;
     }
-    todo_wine_if(v >= 9).
     ok(e === (v < 9 ? 0xa0005 : 0x0ffff) - 0x80000000, "[f.call(null, 'div')] e = " + e);
 
     var elem1 = f.call(document, "div");
@@ -660,60 +658,42 @@ sync_test("xhr open", function() {
 });
 
 sync_test("style_props", function() {
-    var style = document.body.style;
+    var style = document.body.style, currentStyle = document.body.currentStyle, computedStyle = window.getComputedStyle ? window.getComputedStyle(document.body) : undefined;
 
-    function test_exposed(prop, expect) {
-        if(expect)
+    function test_exposed(prop, expect_style, expect_currentStyle, expect_computedStyle) {
+        if(expect_style)
             ok(prop in style, prop + " not found in style object.");
         else
             ok(!(prop in style), prop + " found in style object.");
+        if(expect_currentStyle)
+            ok(prop in currentStyle, prop + " not found in currentStyle object.");
+        else
+            ok(!(prop in currentStyle), prop + " found in currentStyle object.");
+        if(computedStyle) {
+            if(expect_computedStyle)
+                ok(prop in computedStyle, prop + " not found in computedStyle object.");
+            else
+                ok(!(prop in computedStyle), prop + " found in computedStyle object.");
+        }
     }
 
     var v = document.documentMode;
 
-    test_exposed("removeAttribute", true);
-    test_exposed("zIndex", true);
-    test_exposed("z-index", true);
-    test_exposed("filter", true);
-    test_exposed("pixelTop", true);
-    test_exposed("float", true);
-    test_exposed("css-float", false);
-    test_exposed("style-float", false);
-    test_exposed("setProperty", v >= 9);
-    test_exposed("removeProperty", v >= 9);
-    test_exposed("background-clip", v >= 9);
-    test_exposed("msTransform", v >= 9);
-    test_exposed("transform", v >= 10);
-
-    style = document.body.currentStyle;
-
-    test_exposed("zIndex", true);
-    test_exposed("z-index", true);
-    test_exposed("filter", true);
-    test_exposed("pixelTop", false);
-    test_exposed("float", true);
-    test_exposed("css-float", false);
-    test_exposed("style-float", false);
-    test_exposed("setProperty", v >= 9);
-    test_exposed("removeProperty", v >= 9);
-    test_exposed("background-clip", v >= 9);
-    test_exposed("transform", v >= 10);
-
-    if(window.getComputedStyle) {
-        style = window.getComputedStyle(document.body);
-
-        test_exposed("removeAttribute", false);
-        test_exposed("zIndex", true);
-        test_exposed("z-index", true);
-        test_exposed("pixelTop", false);
-        test_exposed("float", true);
-        test_exposed("css-float", false);
-        test_exposed("style-float", false);
-        test_exposed("setProperty", v >= 9);
-        test_exposed("removeProperty", v >= 9);
-        test_exposed("background-clip", v >= 9);
-        test_exposed("transform", v >= 10);
-    }
+    test_exposed("removeAttribute", true, broken(true) ? v >= 9 : false /* todo_wine */, false);
+    test_exposed("zIndex", true, true, true);
+    test_exposed("z-index", true, true, true);
+    test_exposed("filter", true, true, broken(true) ? v >= 10 : v >= 9 /* todo_wine */);
+    test_exposed("pixelTop", true, false, false);
+    test_exposed("float", true, true, true);
+    test_exposed("css-float", false, false, false);
+    test_exposed("style-float", false, false, false);
+    test_exposed("setProperty", v >= 9, v >= 9, v >= 9);
+    test_exposed("removeProperty", v >= 9, v >= 9, v >= 9);
+    test_exposed("background-clip", v >= 9, v >= 9, v >= 9);
+    test_exposed("msTransform", v >= 9, v >= 9, v >= 9);
+    test_exposed("msTransition", v >= 10, v >= 10, v >= 10);
+    test_exposed("transform", v >= 10, v >= 10, v >= 10);
+    test_exposed("transition", v >= 10, v >= 10, v >= 10);
 });
 
 sync_test("createElement_inline_attr", function() {

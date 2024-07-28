@@ -1502,8 +1502,6 @@ enum server_fd_type
     FD_TYPE_DIR,      /* directory */
     FD_TYPE_SOCKET,   /* socket */
     FD_TYPE_SERIAL,   /* serial port */
-    FD_TYPE_PIPE,     /* named pipe */
-    FD_TYPE_MAILSLOT, /* mailslot */
     FD_TYPE_CHAR,     /* unspecified char device */
     FD_TYPE_DEVICE,   /* Windows device file */
     FD_TYPE_NB_TYPES
@@ -3433,6 +3431,7 @@ struct handle_info
 /* Create a mailslot */
 @REQ(create_mailslot)
     unsigned int   access;        /* wanted access rights */
+    unsigned int   options;
     timeout_t      read_timeout;
     unsigned int   max_msgsize;
     VARARG(objattr,object_attributes); /* object attributes */

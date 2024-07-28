@@ -504,7 +504,7 @@ static HRESULT WINAPI HTMLEventObj_put_cancelBubble(IHTMLEventObj *iface, VARIAN
     TRACE("(%p)->(%x)\n", This, v);
 
     if(This->event)
-        IDOMEvent_stopPropagation(&This->event->IDOMEvent_iface);
+        IDOMEvent_put_cancelBubble(&This->event->IDOMEvent_iface, v);
     return S_OK;
 }
 
@@ -514,8 +514,7 @@ static HRESULT WINAPI HTMLEventObj_get_cancelBubble(IHTMLEventObj *iface, VARIAN
 
     TRACE("(%p)->(%p)\n", This, p);
 
-    *p = variant_bool(This->event && This->event->stop_propagation);
-    return S_OK;
+    return IDOMEvent_get_cancelBubble(&This->event->IDOMEvent_iface, p);
 }
 
 static HRESULT WINAPI HTMLEventObj_get_fromElement(IHTMLEventObj *iface, IHTMLElement **p)
@@ -2013,7 +2012,6 @@ static HRESULT WINAPI DOMEvent_stopPropagation(IDOMEvent *iface)
     TRACE("(%p)\n", This);
 
     This->stop_propagation = TRUE;
-    nsIDOMEvent_StopPropagation(This->nsevent);
     return S_OK;
 }
 
@@ -2041,15 +2039,25 @@ static HRESULT WINAPI DOMEvent_get_isTrusted(IDOMEvent *iface, VARIANT_BOOL *p)
 static HRESULT WINAPI DOMEvent_put_cancelBubble(IDOMEvent *iface, VARIANT_BOOL v)
 {
     DOMEvent *This = impl_from_IDOMEvent(iface);
-    FIXME("(%p)->(%x)\n", This, v);
-    return E_NOTIMPL;
+
+    TRACE("(%p)->(%x)\n", This, v);
+
+    if(This->phase < 2)
+        return S_OK;
+
+    /* stop_immediate_propagation is not able to be interrupted, but native has a weird behavior. */
+    This->stop_propagation = (v != VARIANT_FALSE);
+    return S_OK;
 }
 
 static HRESULT WINAPI DOMEvent_get_cancelBubble(IDOMEvent *iface, VARIANT_BOOL *p)
 {
     DOMEvent *This = impl_from_IDOMEvent(iface);
-    FIXME("(%p)->(%p)\n", This, p);
-    return E_NOTIMPL;
+
+    TRACE("(%p)->(%p)\n", This, p);
+
+    *p = variant_bool(This->stop_propagation);
+    return S_OK;
 }
 
 static HRESULT WINAPI DOMEvent_get_srcElement(IDOMEvent *iface, IHTMLElement **p)
@@ -4257,8 +4265,7 @@ static void call_event_handlers(EventTarget *event_target, DOMEvent *event, disp
         }
     }
 
-    for(listener = listeners; !event->stop_immediate_propagation
-            && listener < listeners + listeners_cnt; listener++) {
+    for(listener = listeners; listener < listeners + listeners_cnt; listener++) {
         if(listener->type != LISTENER_TYPE_ATTACHED) {
             DISPID named_arg = DISPID_THIS;
             VARIANTARG args[2];
@@ -4321,6 +4328,9 @@ static void call_event_handlers(EventTarget *event_target, DOMEvent *event, disp
                 WARN("%p %s attached <<< %08lx\n", event_target, debugstr_w(event->type), hres);
             }
         }
+
+        if(event->stop_immediate_propagation)
+            break;
     }
 
     for(listener = listeners; listener < listeners + listeners_cnt; listener++)
@@ -4468,6 +4478,9 @@ static HRESULT dispatch_event_object(EventTarget *event_target, DOMEvent *event,
         for(i = 1; !event->stop_propagation && i < chain_cnt; i++)
             call_event_handlers(target_chain[i], event, dispatch_mode);
     }
+
+    if(event->stop_propagation)
+        nsIDOMEvent_StopPropagation(event->nsevent);
 
     if(r)
         *r = variant_bool(!event->prevent_default);
